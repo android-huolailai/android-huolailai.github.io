@@ -15,7 +15,7 @@
 <meta property="og:url" content="http://gityong.cn/2017/12/25/Handler+Looper源码解析(一)/index.html">
 <meta property="og:site_name" content="gityong">
 <meta property="og:description" content="1.前言 [单线程模型] 当一个程序第一次启动时，Android会同时启动一个对应的 主线程（Main Thread），主线程主要负责处理与UI相关的事件，如：用户的按键事件，用户接触屏幕的事件以及屏幕绘图事 件，并把相关的事件分发到对应的组件进行处理。所以主线程通常又被叫做UI线 程。在开发Android应用时必须遵守单线程模型的原则： Android UI操作并不是线程安全的并且这些操作必须在">
-<meta property="og:updated_time" content="2017-12-25T08:12:35.000Z">
+<meta property="og:updated_time" content="2017-12-25T08:16:23.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Handler+Looper源码解析(一)">
 <meta name="twitter:description" content="1.前言 [单线程模型] 当一个程序第一次启动时，Android会同时启动一个对应的 主线程（Main Thread），主线程主要负责处理与UI相关的事件，如：用户的按键事件，用户接触屏幕的事件以及屏幕绘图事 件，并把相关的事件分发到对应的组件进行处理。所以主线程通常又被叫做UI线 程。在开发Android应用时必须遵守单线程模型的原则： Android UI操作并不是线程安全的并且这些操作必须在">
@@ -183,42 +183,24 @@
 <p>public static final void prepare() {<br>        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (sThreadLocal.get() != null) {<br>            throw new RuntimeException(“Only one Looper may be created per thread”);<br>        }<br>       &nbsp;&nbsp;&nbsp;&nbsp; sThreadLocal.set(new Looper(true));<br>}<br>sThreadLocal是一个ThreadLocal对象，可以在一个线程中存储，可以看到该方法是<code>将一个Looper的实例放入了ThreadLocal</code>，并且判断了sThreadLocal是否为null，否则抛出异常。这也就说明了Looper.prepare()方法不能被调用两次，同时也保证了一个线程中只有一个Looper实例和一个MessageQueue。那么sThreadLocal又是怎么来的呢？<br>static final ThreadLocal<looper> sThreadLocal = new ThreadLocal<looper>(); Looper类的静态变量。</looper></looper></p>
 <ul>
 <li>再来看Looper的构造<br>private Looper(boolean quitAllowed) {<br>mQueue = new MessageQueue(quitAllowed);<br>mRun = true;<br>mThread = Thread.currentThread();<br>}<br>私有构造，初始化了一个MessageQueue,那么Looper.prepare主要是<code>sThreadLocal中存放一个Looper对象，初始化了一个消息队列</code>。<br><br><br></li>
-<li><p>下面我们分析loop方法</p>
-<p>public static void loop() {  </p>
-<pre><code> final Looper me = myLooper();  
- if (me == null) {  
-     throw new RuntimeException(&quot;No Looper; Looper.prepare() wasn&apos;t called on this thread.&quot;);  
- }  
- final MessageQueue queue = me.mQueue;  
-
-// Make sure the identity of this thread is that of the local process,  
- // and keep track of what that identity token actually is.  
- Binder.clearCallingIdentity();  
- final long ident = Binder.clearCallingIdentity();  
-
-for (;;) {  
-     Message msg = queue.next(); // might block  
-     if (msg == null) {  
-         // No message indicates that the message queue is quitting.  
-         return;  
-     }  
-</code></pre><p>  // This must be in a local variable, in case a UI event sets the logger  </p>
-<pre><code>Printer logging = me.mLogging;  
-if (logging != null) {  
-    logging.println(&quot;&gt;&gt;&gt;&gt;&gt; Dispatching to &quot; + msg.target + &quot; &quot; +  
-            msg.callback + &quot;: &quot; + msg.what);  
-}  
-</code></pre><p>   msg.target.dispatchMessage(msg);  </p>
-</li>
+<li>下面我们分析loop方法</li>
 </ul>
+<p>public static void loop() {<br>final Looper me = myLooper();<br>if (me == null) {<br>            throw new RuntimeException(“No Looper; Looper.prepare() wasn’t called on this thread.”);<br>        }<br>        final MessageQueue queue = me.mQueue;  </p>
+<p>// Make sure the identity of this thread is that of the local process,<br>        // and keep track of what that identity token actually is.<br>        Binder.clearCallingIdentity();<br>        final long ident = Binder.clearCallingIdentity();  </p>
+<p>for (;;) {<br>            Message msg = queue.next(); // might block<br>            if (msg == null) {<br>                // No message indicates that the message queue is quitting.<br>                return;<br>            }  </p>
+<p> // This must be in a local variable, in case a UI event sets the logger<br>            Printer logging = me.mLogging;<br>            if (logging != null) {<br>                logging.println(“&gt;&gt;&gt;&gt;&gt; Dispatching to “ + msg.target + “ “ +<br>                        msg.callback + “: “ + msg.what);<br>            }  </p>
+<p>msg.target.dispatchMessage(msg);  </p>
 <p>if (logging != null) {<br>                logging.println(“&lt;&lt;&lt;&lt;&lt; Finished to “ + msg.target + “ “ + msg.callback);<br>            }  </p>
-<p>// Make sure that during the course of dispatching the<br>            // identity of the thread wasn’t corrupted.<br>            final long newIdent = Binder.clearCallingIdentity();<br>            if (ident != newIdent) {<br>                Log.wtf(TAG, “Thread identity changed from 0x”  </p>
-<pre><code>            + Long.toHexString(ident) + &quot; to 0x&quot;  
-            + Long.toHexString(newIdent) + &quot; while dispatching to &quot;  
-            + msg.target.getClass().getName() + &quot; &quot;  
-            + msg.callback + &quot; what=&quot; + msg.what);  
-}  
-</code></pre><p>msg.recycle();<br>        }<br>}</p>
+<p>// Make sure that during the course of dispatching the<br>            // identity of the thread wasn’t corrupted.<br>            final long newIdent = Binder.clearCallingIdentity();  </p>
+<p>if (ident != newIdent) {<br>Log.wtf(TAG, “Thread identity changed from 0x”  </p>
+<ul>
+<li>Long.toHexString(ident) + “ to 0x”  </li>
+<li>Long.toHexString(newIdent) + “ while dispatching to “  </li>
+<li>msg.target.getClass().getName() + “ “  </li>
+<li>msg.callback + “ what=” + msg.what);  <pre><code>}  
+</code></pre></li>
+</ul>
+<p>msg.recycle();<br>        }<br>}</p>
 <p>代码稍微多一点，我们只看重点，首先看myLooper方法</p>
 <p>  public static Looper myLooper() {<br>return sThreadLocal.get();<br>}</p>
 <p>（1）从sThreadLocal中取出当前线程的Looper对象，如果是null则报异常，说明Looper.loop要在Looper.prepare后面。</p>
@@ -478,11 +460,11 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
           <ul class="article-tag-list" q-show="showTags">
              
               <li class="article-tag-list-item">
-                <a href="javascript:void(0)" class="js-tag color3">Handler</a>
+                <a href="javascript:void(0)" class="js-tag color3">随笔</a>
               </li>
              
               <li class="article-tag-list-item">
-                <a href="javascript:void(0)" class="js-tag color3">随笔</a>
+                <a href="javascript:void(0)" class="js-tag color3">Handler</a>
               </li>
              
               <li class="article-tag-list-item">
