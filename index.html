@@ -182,10 +182,7 @@
 </ul>
 <p>public static final void prepare() {<br>        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (sThreadLocal.get() != null) {<br>            throw new RuntimeException(“Only one Looper may be created per thread”);<br>        }<br>       &nbsp;&nbsp;&nbsp;&nbsp; sThreadLocal.set(new Looper(true));<br>}<br>sThreadLocal是一个ThreadLocal对象，可以在一个线程中存储，可以看到该方法是<code>将一个Looper的实例放入了ThreadLocal</code>，并且判断了sThreadLocal是否为null，否则抛出异常。这也就说明了Looper.prepare()方法不能被调用两次，同时也保证了一个线程中只有一个Looper实例和一个MessageQueue。那么sThreadLocal又是怎么来的呢？<br>static final ThreadLocal<looper> sThreadLocal = new ThreadLocal<looper>(); Looper类的静态变量。</looper></looper></p>
 <ul>
-<li>再来看Looper的构造<br>private Looper(boolean quitAllowed) {  <pre><code>mQueue = new MessageQueue(quitAllowed);  
-mRun = true;  
-mThread = Thread.currentThread();  
-</code></pre>}<br>私有构造，初始化了一个MessageQueue,那么Looper.prepare主要是<code>sThreadLocal中存放一个Looper对象，初始化了一个消息队列</code>。<br><br><br></li>
+<li>再来看Looper的构造<br>private Looper(boolean quitAllowed) {<br>&nbsp;&nbsp;&nbsp;&nbsp;mQueue = new MessageQueue(quitAllowed);<br>&nbsp;&nbsp;&nbsp;&nbsp;mRun = true;<br>&nbsp;&nbsp;&nbsp;&nbsp;mThread = Thread.currentThread();<br>}<br>私有构造，初始化了一个MessageQueue,那么Looper.prepare主要是<code>sThreadLocal中存放一个Looper对象，初始化了一个消息队列</code>。<br><br><br></li>
 <li><p>下面我们分析loop方法</p>
 <p>public static void loop() {  </p>
 <pre><code>final Looper me = myLooper();  
@@ -538,15 +535,15 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
           <ul class="article-tag-list" q-show="showTags">
              
               <li class="article-tag-list-item">
-                <a href="javascript:void(0)" class="js-tag color3">随笔</a>
-              </li>
-             
-              <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color3">Handler</a>
               </li>
              
               <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color3">杂文</a>
+              </li>
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color3">随笔</a>
               </li>
             
             <div class="clearfix"></div>
